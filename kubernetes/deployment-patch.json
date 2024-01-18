@@ -1,0 +1,66 @@
+{
+    "spec": {
+        "template": {
+            "spec": {
+                "$setElementOrder/containers": [
+                    {
+                        "name": "manager"
+                    },
+                    {
+                        "name": "plugin-pvc-backup"
+                    }
+                ],
+                "$setElementOrder/volumes": [
+                    {
+                        "name": "scratch-data"
+                    },
+                    {
+                        "name": "plugins"
+                    },
+                    {
+                        "name": "webhook-certificates"
+                    }
+                ],
+                "containers": [
+                    {
+                        "$setElementOrder/volumeMounts": [
+                            {
+                                "mountPath": "/controller"
+                            },
+                            {
+                                "mountPath": "/run/secrets/cnpg.io/webhook"
+                            },
+                            {
+                                "mountPath": "/plugins"
+                            }
+                        ],
+                        "name": "manager",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/plugins",
+                                "name": "plugins"
+                            }
+                        ]
+                    },
+                    {
+                        "image": "plugin-pvc-backup:latest",
+                        "imagePullPolicy": "Never",
+                        "name": "plugin-pvc-backup",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/plugins",
+                                "name": "plugins"
+                            }
+                        ]
+                    }
+                ],
+                "volumes": [
+                    {
+                        "emptyDir": {},
+                        "name": "plugins"
+                    }
+                ]
+            }
+        }
+    }
+}
