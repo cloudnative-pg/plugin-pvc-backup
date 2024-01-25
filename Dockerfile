@@ -8,7 +8,7 @@ RUN go mod download
 
 # Compile the application
 COPY . /app
-RUN ./scripts/build.sh
+RUN --mount=type=cache,target=/root/.cache/go-build ./scripts/build.sh
 
 # Step 2: build the image to be actually run
 FROM alpine:3.18.4
