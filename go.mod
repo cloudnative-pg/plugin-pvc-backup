@@ -6,7 +6,7 @@ toolchain go1.21.6
 
 require (
 	github.com/cloudnative-pg/cloudnative-pg v1.22.1-0.20240123130737-a22a155b9eb8
-	github.com/cloudnative-pg/cnpg-i v0.0.0-20240122164555-5215ff219c8f
+	github.com/cloudnative-pg/cnpg-i v0.0.0-20240124144003-4c0a1ac46426
 	github.com/evanphx/json-patch/v5 v5.8.1
 	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.2.4
