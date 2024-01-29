@@ -1,10 +1,16 @@
 package pluginhelper
 
 import (
+	"context"
+	"errors"
 	"net"
+	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"github.com/cloudnative-pg/cnpg-i/pkg/identity"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -31,53 +37,7 @@ func CreateMainCmd(identityImpl identity.IdentityServer, enrichers ...ServerEnri
 		},
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			logger := logging.FromContext(cmd.Context())
-
-			identityResponse, err := identityImpl.GetPluginMetadata(
-				cmd.Context(),
-				&identity.GetPluginMetadataRequest{})
-			if err != nil {
-				logger.Error(err, "Error while querying the identity service")
-				return err
-			}
-
-			pluginPath := viper.GetString("plugin-path")
-			pluginName := identityResponse.Name
-			pluginDisplayName := identityResponse.DisplayName
-			pluginVersion := identityResponse.Version
-			socketName := path.Join(pluginPath, identityResponse.Name)
-
-			grpcServer := grpc.NewServer()
-			identity.RegisterIdentityServer(
-				grpcServer,
-				identityImpl)
-			for _, enrich := range enrichers {
-				enrich(grpcServer)
-			}
-
-			listener, err := net.Listen(
-				unixNetwork,
-				socketName,
-			)
-			if err != nil {
-				logger.Error(err, "While starting server")
-				return err
-			}
-
-			logger.Info(
-				"Starting plugin",
-				"path", pluginPath,
-				"name", pluginName,
-				"displayName", pluginDisplayName,
-				"version", pluginVersion,
-				"socketName", socketName,
-			)
-			err = grpcServer.Serve(listener)
-			if err != nil {
-				logger.Error(err, "While terminatind server")
-			}
-
-			return err
+			return run(cmd.Context(), identityImpl, enrichers...)
 		},
 	}
 
@@ -96,4 +56,126 @@ func CreateMainCmd(identityImpl identity.IdentityServer, enrichers ...ServerEnri
 	_ = viper.BindPFlag("plugin-path", cmd.Flags().Lookup("plugin-path"))
 
 	return cmd
+}
+
+// run starts listining for GRPC requests
+func run(ctx context.Context, identityImpl identity.IdentityServer, enrichers ...ServerEnricher) error {
+	logger := logging.FromContext(ctx)
+
+	identityResponse, err := identityImpl.GetPluginMetadata(
+		ctx,
+		&identity.GetPluginMetadataRequest{})
+	if err != nil {
+		logger.Error(err, "Error while querying the identity service")
+		return err
+	}
+
+	pluginPath := viper.GetString("plugin-path")
+	pluginName := identityResponse.Name
+	pluginDisplayName := identityResponse.DisplayName
+	pluginVersion := identityResponse.Version
+	socketName := path.Join(pluginPath, identityResponse.Name)
+
+	// Remove stale unix socket it still existent
+	if err := removeStaleSocket(ctx, socketName); err != nil {
+		logger.Error(err, "While removing old unix socket")
+		return err
+	}
+
+	// Start accepting connections on the socket
+	listener, err := net.Listen(
+		unixNetwork,
+		socketName,
+	)
+	if err != nil {
+		logger.Error(err, "While starting server")
+		return err
+	}
+
+	// Handle quit-like signal
+	handleSignals(ctx, listener)
+
+	// Create GRPC server
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(panicRecoveryHandler(listener))),
+		),
+		grpc.ChainStreamInterceptor(
+			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(panicRecoveryHandler(listener))),
+		),
+	)
+	identity.RegisterIdentityServer(
+		grpcServer,
+		identityImpl)
+	for _, enrich := range enrichers {
+		enrich(grpcServer)
+	}
+
+	logger.Info(
+		"Starting plugin",
+		"path", pluginPath,
+		"name", pluginName,
+		"displayName", pluginDisplayName,
+		"version", pluginVersion,
+		"socketName", socketName,
+	)
+
+	if err = grpcServer.Serve(listener); !errors.Is(err, net.ErrClosed) {
+		logger.Error(err, "While terminating server")
+	}
+
+	return nil
+}
+
+// removeStaleSocket removes a stale unix domain socket
+func removeStaleSocket(ctx context.Context, pluginPath string) error {
+	logger := logging.FromContext(ctx)
+	_, err := os.Stat(pluginPath)
+
+	switch {
+	case err == nil:
+		logger.Info("Removing stale socket", "pluginPath", pluginPath)
+		return os.Remove(pluginPath)
+
+	case errors.Is(err, os.ErrNotExist):
+		return nil
+
+	default:
+		return err
+	}
+}
+
+// handleSignals makes sure that we close the listening socket
+// when we receive a quit-like signal
+func handleSignals(ctx context.Context, listener net.Listener) {
+	logger := logging.FromContext(ctx)
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGTERM, syscall.SIGABRT, syscall.SIGINT)
+	go func(c chan os.Signal) {
+		sig := <-c
+		logger.Info(
+			"Caught signal, shutting down.",
+			"signal", sig.String())
+
+		if err := listener.Close(); err != nil {
+			logger.Error(err, "While stopping server")
+		}
+
+		os.Exit(1)
+	}(sigc)
+}
+
+func panicRecoveryHandler(listener net.Listener) recovery.RecoveryHandlerFuncContext {
+	return func(ctx context.Context, err any) error {
+		logger := logging.FromContext(ctx)
+		logger.Info("Panic occurred", "error", err)
+
+		if closeError := listener.Close(); closeError != nil {
+			logger.Error(closeError, "While stopping server")
+		}
+
+		os.Exit(1)
+		return nil
+	}
 }
