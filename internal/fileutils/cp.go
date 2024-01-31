@@ -123,7 +123,7 @@ func copyFileContents(src, dst string) error {
 	}()
 
 	// Copy the contents of the source file into the destination files
-	size := 1024 * 1024
+	const size = 1024 * 1024
 	buf := make([]byte, size)
 	if _, err = io.CopyBuffer(dstFile, srcFile, buf); err != nil {
 		return err
