@@ -30,6 +30,8 @@ const (
 	imagePullPolicyParameter = "imagePullPolicy"
 	imageNameParameter       = "image"
 	pvcNameParameter         = "pvc"
+	secretNameParameter      = "secretName"
+	secretKeyParameter       = "secretKey"
 )
 
 // ValidateClusterCreate validates a cluster that is being created
@@ -90,6 +92,18 @@ func validateParameters(helper *pluginhelper.Data) []*operator.ValidationError {
 		result = append(
 			result,
 			helper.ValidationErrorForParameter(imageNameParameter, "cannot be empty"))
+	}
+
+	if len(helper.Parameters[secretNameParameter]) == 0 {
+		result = append(
+			result,
+			helper.ValidationErrorForParameter(secretNameParameter, "cannot be empty"))
+	}
+
+	if len(helper.Parameters[secretKeyParameter]) == 0 {
+		result = append(
+			result,
+			helper.ValidationErrorForParameter(secretKeyParameter, "cannot be empty"))
 	}
 
 	return result

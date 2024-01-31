@@ -3,7 +3,7 @@ kind: Cluster
 metadata:
   name: cluster-example
 spec:
-  instances: 3
+  instances: 1
 
   plugins:
   - name: pvc-backup.cloudnative-pg.io
@@ -11,6 +11,26 @@ spec:
       pvc: backups-pvc
       image: plugin-pvc-backup:latest
       imagePullPolicy: Never
+      secretName: kopia-password
+      secretKey: password
+
+  tablespaces:
+    - name: atablespace
+      storage:
+        size: 1Gi
+        storageClass: standard
+    - name: another_tablespace
+      storage:
+        size: 2Gi
+        storageClass: standard
 
   storage:
     size: 1Gi
+---
+apiVersion: v1
+data:
+  password: dGhpc2lzYXJhbmRvbXBhc3N3b3Jk
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: kopia-password

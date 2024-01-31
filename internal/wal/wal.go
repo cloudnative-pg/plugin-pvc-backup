@@ -22,15 +22,11 @@ import (
 
 	"github.com/cloudnative-pg/cnpg-i/pkg/wal"
 
+	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/storage"
 	"github.com/cloudnative-pg/plugin-pvc-backup/internal/fileutils"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
-)
-
-const (
-	basePath      = "/backup"
-	walsDirectory = "wals"
 )
 
 // Archive copies one WAL file into the archive
@@ -47,7 +43,7 @@ func (Implementation) Archive(
 	}
 
 	walName := path.Base(request.SourceFileName)
-	destinationPath := getWALFilePath(helper.GetCluster().Name, walName)
+	destinationPath := storage.GetWALFilePath(helper.GetCluster().Name, walName)
 
 	logging = logging.WithValues(
 		"sourceFileName", request.SourceFileName,
@@ -77,7 +73,7 @@ func (Implementation) Restore(
 		return nil, err
 	}
 
-	walFilePath := getWALFilePath(helper.GetCluster().Name, request.SourceWalName)
+	walFilePath := storage.GetWALFilePath(helper.GetCluster().Name, request.SourceWalName)
 	logging = logging.WithValues(
 		"clusterName", helper.GetCluster().Name,
 		"walName", request.SourceWalName,

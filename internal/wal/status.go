@@ -25,6 +25,7 @@ import (
 
 	"github.com/cloudnative-pg/cnpg-i/pkg/wal"
 
+	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/storage"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
@@ -50,7 +51,7 @@ func (Implementation) Status(
 		return nil, err
 	}
 
-	walPath := getWALPath(helper.GetCluster().Name)
+	walPath := storage.GetWALPath(helper.GetCluster().Name)
 	logging = logging.WithValues(
 		"walPath", walPath,
 		"clusterName", helper.GetCluster().Name,
@@ -90,7 +91,7 @@ func getWALStat(clusterName string, entries []fs.DirEntry, mode walStatMode) (st
 		return "", fmt.Errorf("%s is not a directory", entry)
 	}
 
-	entryAbsolutePath := path.Join(getWALPath(clusterName), entry.Name())
+	entryAbsolutePath := path.Join(storage.GetWALPath(clusterName), entry.Name())
 	subFolderEntries, err := os.ReadDir(entryAbsolutePath)
 	if err != nil {
 		return "", fmt.Errorf("while reading %s entries: %w", entry, err)

@@ -79,7 +79,7 @@ func (Implementation) MutatePod(
 	if len(mutatedPod.Spec.Containers) > 0 {
 		mutatedPod.Spec.Containers = append(
 			mutatedPod.Spec.Containers,
-			getSidecarContainer(helper.Parameters))
+			getSidecarContainer(mutatedPod, helper.Parameters))
 	}
 
 	// Inject backup volume
