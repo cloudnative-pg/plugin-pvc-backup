@@ -16,16 +16,9 @@ import (
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 )
 
-const (
-	podIP = "127.0.0.1"
-
-	snapshotTypeName       = "type"
-	snapshotTypeBase       = "base"
-	snapshotTypeTablespace = "tablespace"
-
-	snapshotTablespaceOidName = "oid"
-
-	currentWALFileControlFile = "Latest checkpoint's REDO WAL file"
+var (
+	errBackupNotStarted = fmt.Errorf("backup not started")
+	errBackupNotStopped = fmt.Errorf("backup not stopped")
 )
 
 var backupModeBackoff = wait.Backoff{
@@ -42,9 +35,10 @@ type Executor struct {
 	beginWal string
 	endWal   string
 
-	cluster    *apiv1.Cluster
-	backup     *apiv1.Backup
-	repository *Repository
+	cluster              *apiv1.Cluster
+	backup               *apiv1.Backup
+	repository           *Repository
+	backupClientEndpoint string
 }
 
 // Tablespace represent a tablespace location
@@ -57,42 +51,39 @@ type Tablespace struct {
 }
 
 // NewExecutor creates a new backup executor
-func NewExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *Repository) *Executor {
+func NewExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *Repository, endpoint string) *Executor {
 	return &Executor{
-		backupClient: webserver.NewBackupClient(),
-		cluster:      cluster,
-		backup:       backup,
-		repository:   repo,
+		backupClient:         webserver.NewBackupClient(),
+		cluster:              cluster,
+		backup:               backup,
+		repository:           repo,
+		backupClientEndpoint: endpoint,
 	}
 }
 
 // Start starts a backup by setting PostgreSQL in backup mode
 func (executor *Executor) Start(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
-	errBackupNotStarted := fmt.Errorf("backup not started")
 
-	var err error
-	executor.beginWal, err = executor.getCurrentWALFile(ctx)
-	if err != nil {
-		return err
+	var currentWALErr error
+	executor.beginWal, currentWALErr = executor.getCurrentWALFile(ctx)
+	if currentWALErr != nil {
+		return currentWALErr
 	}
 
-	err = executor.backupClient.Start(ctx, podIP, webserver.StartBackupRequest{
+	if err := executor.backupClient.Start(ctx, executor.backupClientEndpoint, webserver.StartBackupRequest{
 		ImmediateCheckpoint: true,
 		WaitForArchive:      true,
 		BackupName:          executor.backup.GetName(),
 		Force:               true,
-	})
-	if err != nil {
+	}); err != nil {
 		logger.Error(err, "while requesting new backup on PostgreSQL")
 		return err
 	}
 
 	logger.Info("Requesting PostgreSQL Backup mode")
-	err = retry.OnError(backupModeBackoff, func(e error) bool {
-		return e == errBackupNotStarted
-	}, func() error {
-		response, err := executor.backupClient.StatusWithErrors(ctx, podIP)
+	if err := retry.OnError(backupModeBackoff, retryOnBackupNotStarted, func() error {
+		response, err := executor.backupClient.StatusWithErrors(ctx, executor.backupClientEndpoint)
 		if err != nil {
 			return err
 		}
@@ -103,8 +94,7 @@ func (executor *Executor) Start(ctx context.Context) error {
 		}
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
@@ -114,6 +104,14 @@ func (executor *Executor) Start(ctx context.Context) error {
 
 // Backup takes the snapshot of the data directory and the tablespace folder
 func (executor *Executor) Backup(ctx context.Context) error {
+	const snapshotTablespaceOidName = "oid"
+
+	const (
+		snapshotTypeName       = "type"
+		snapshotTypeBase       = "base"
+		snapshotTypeTablespace = "tablespace"
+	)
+
 	logger := logging.FromContext(ctx)
 
 	tablespaces, err := executor.getTablespaces(ctx)
@@ -175,9 +173,8 @@ func (*Executor) getTablespaces(ctx context.Context) ([]Tablespace, error) {
 // Stop stops a backup and resume PostgreSQL normal operation
 func (executor *Executor) Stop(ctx context.Context) (*webserver.BackupResultData, error) {
 	logger := logging.FromContext(ctx)
-	errBackupNotStopped := fmt.Errorf("backup not stopped")
 
-	err := executor.backupClient.Stop(ctx, podIP, webserver.StopBackupRequest{
+	err := executor.backupClient.Stop(ctx, executor.backupClientEndpoint, webserver.StopBackupRequest{
 		BackupName: executor.backup.GetName(),
 	})
 	if err != nil {
@@ -187,10 +184,8 @@ func (executor *Executor) Stop(ctx context.Context) (*webserver.BackupResultData
 
 	logger.Info("Stopping PostgreSQL Backup mode")
 	var backupStatus webserver.BackupResultData
-	err = retry.OnError(backupModeBackoff, func(e error) bool {
-		return e == errBackupNotStopped
-	}, func() error {
-		response, err := executor.backupClient.StatusWithErrors(ctx, podIP)
+	err = retry.OnError(backupModeBackoff, retryOnBackupNotStopped, func() error {
+		response, err := executor.backupClient.StatusWithErrors(ctx, executor.backupClientEndpoint)
 		if err != nil {
 			return err
 		}
@@ -217,7 +212,17 @@ func (executor *Executor) Stop(ctx context.Context) (*webserver.BackupResultData
 	return &backupStatus, err
 }
 
+func retryOnBackupNotStarted(e error) bool {
+	return e == errBackupNotStarted
+}
+
+func retryOnBackupNotStopped(e error) bool {
+	return e == errBackupNotStopped
+}
+
 func (executor *Executor) getCurrentWALFile(ctx context.Context) (string, error) {
+	const currentWALFileControlFile = "Latest checkpoint's REDO WAL file"
+
 	controlDataOutput, err := getPgControlData(ctx)
 	if err != nil {
 		return "", err

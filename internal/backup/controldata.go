@@ -21,8 +21,10 @@ func getPgControlData(
 ) (map[string]string, error) {
 	contextLogger := logging.FromContext(ctx)
 
-	const connectionTimeout = 2 * time.Second
-	const requestTimeout = 30 * time.Second
+	const (
+		connectionTimeout = 2 * time.Second
+		requestTimeout    = 30 * time.Second
+	)
 
 	// We want a connection timeout to prevent waiting for the default
 	// TCP connection timeout (30 seconds) on lost SYN packets
@@ -36,7 +38,7 @@ func getPgControlData(
 	}
 
 	httpURL := url.Build(podIP, url.PathPGControlData, url.StatusPort)
-	req, err := http.NewRequestWithContext(ctx, "GET", httpURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, httpURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +59,7 @@ func getPgControlData(
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		contextLogger.Info("Error while querying the pg_controldata endpoint",
 			"statusCode", resp.StatusCode,
 			"body", string(body))

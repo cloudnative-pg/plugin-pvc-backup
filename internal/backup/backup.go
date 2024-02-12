@@ -40,17 +40,17 @@ func (Implementation) Backup(
 	ctx context.Context,
 	request *backup.BackupRequest,
 ) (*backup.BackupResult, error) {
-	logging := logging.FromContext(ctx)
+	contextLogger := logging.FromContext(ctx)
 
 	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.ClusterDefinition)
 	if err != nil {
-		logging.Error(err, "Error while decoding cluster definition from CNPG")
+		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err
 	}
 
 	backupObject, err := helper.DecodeBackup(request.BackupDefinition)
 	if err != nil {
-		logging.Error(err, "Error while decoding backup definition from CNPG")
+		contextLogger.Error(err, "Error while decoding backup definition from CNPG")
 		return nil, err
 	}
 
@@ -68,20 +68,21 @@ func (Implementation) Backup(
 		helper.GetCluster(),
 		backupObject,
 		repository,
+		podIP,
 	)
 
 	startedAt := time.Now()
-	logging.Info("Preparing physical backup")
+	contextLogger.Info("Preparing physical backup")
 	if err := executor.Start(ctx); err != nil {
 		return nil, err
 	}
 
-	logging.Info("Copying files")
+	contextLogger.Info("Copying files")
 	if err := executor.Backup(ctx); err != nil {
 		return nil, err
 	}
 
-	logging.Info("Finishing backup")
+	contextLogger.Info("Finishing backup")
 	backupInfo, err := executor.Stop(ctx)
 	if err != nil {
 		return nil, err
