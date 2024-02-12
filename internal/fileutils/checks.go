@@ -1,7 +1,6 @@
 package fileutils
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -19,19 +18,4 @@ func IsDir(path string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-// FileExists checks if a path points to an existing file
-func FileExists(path string) (bool, error) {
-	fileInfo, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err == nil {
-		if fileInfo.Mode().IsRegular() {
-			return true, nil
-		}
-		return false, fmt.Errorf("%s is not a file", path)
-	}
-	return false, err
 }
