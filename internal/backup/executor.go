@@ -104,7 +104,6 @@ func (executor *Executor) Start(ctx context.Context) error {
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}

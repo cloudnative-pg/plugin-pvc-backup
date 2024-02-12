@@ -12,9 +12,9 @@ func getWalPrefix(walName string) string {
 	return walName[0:16]
 }
 
-// GetClusterPath gets the path where the files relative
+// getClusterPath gets the path where the files relative
 // to a cluster are stored
-func GetClusterPath(clusterName string) string {
+func getClusterPath(clusterName string) string {
 	return path.Join(basePath, clusterName)
 }
 
@@ -22,7 +22,7 @@ func GetClusterPath(clusterName string) string {
 // to a cluster are stored
 func GetWALPath(clusterName string) string {
 	return path.Join(
-		GetClusterPath(clusterName),
+		getClusterPath(clusterName),
 		walsDirectory,
 	)
 }
@@ -31,7 +31,7 @@ func GetWALPath(clusterName string) string {
 // kopia configuration file will be written
 func GetKopiaConfigFilePath(clusterName string) string {
 	return path.Join(
-		GetClusterPath(clusterName),
+		getClusterPath(clusterName),
 		".kopia.config",
 	)
 }
@@ -40,7 +40,7 @@ func GetKopiaConfigFilePath(clusterName string) string {
 // kopia cache will be written
 func GetKopiaCacheDirectory(clusterName string) string {
 	return path.Join(
-		GetClusterPath(clusterName),
+		getClusterPath(clusterName),
 		".kopia.cache",
 	)
 }
@@ -49,7 +49,7 @@ func GetKopiaCacheDirectory(clusterName string) string {
 // to a cluster are stored
 func GetBasePath(clusterName string) string {
 	return path.Join(
-		GetClusterPath(clusterName),
+		getClusterPath(clusterName),
 		baseDirectory,
 	)
 }

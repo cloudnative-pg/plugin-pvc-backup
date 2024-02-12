@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudnative-pg/cloudnative-pg/pkg/management/url"
 	"github.com/cloudnative-pg/cloudnative-pg/pkg/utils"
+
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 )
 
