@@ -31,6 +31,8 @@ const (
 	pluginMountPath  = "/plugins"
 )
 
+// TODO: introduce a deserialize struct?
+
 // Data is an helper structure to be used by
 // plugins wanting to enhance the CNPG validating webhooks
 type Data struct {
@@ -42,15 +44,15 @@ type Data struct {
 	pluginIndex int
 }
 
-// NewFromCluster creates a new validation helper loading
+// NewFromJSONCluster creates a new validation helper loading
 // a cluster definition
-func NewFromCluster(
+func NewFromJSONCluster(
 	pluginName string,
-	clusterDefinition []byte,
+	jsonCluster []byte,
 ) (*Data, error) {
 	result := &Data{}
 
-	if err := json.Unmarshal(clusterDefinition, &result.cluster); err != nil {
+	if err := json.Unmarshal(jsonCluster, &result.cluster); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +74,7 @@ func NewFromClusterAndPod(
 	clusterDefinition []byte,
 	podDefinition []byte,
 ) (*Data, error) {
-	result, err := NewFromCluster(pluginName, clusterDefinition)
+	result, err := NewFromJSONCluster(pluginName, clusterDefinition)
 	if err != nil {
 		return nil, err
 	}

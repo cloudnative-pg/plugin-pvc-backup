@@ -43,35 +43,35 @@ func (Implementation) Status(
 	ctx context.Context,
 	request *wal.WALStatusRequest,
 ) (*wal.WALStatusResult, error) {
-	logging := logging.FromContext(ctx)
+	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.ClusterDefinition)
 	if err != nil {
-		logging.Error(err, "Error while decoding cluster definition from CNPG")
+		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err
 	}
 
 	walPath := storage.GetWALPath(helper.GetCluster().Name)
-	logging = logging.WithValues(
+	contextLogger = contextLogger.WithValues(
 		"walPath", walPath,
 		"clusterName", helper.GetCluster().Name,
 	)
 
 	walDirEntries, err := os.ReadDir(walPath)
 	if err != nil {
-		logging.Error(err, "Error while reading WALs directory")
+		contextLogger.Error(err, "Error while reading WALs directory")
 		return nil, err
 	}
 
 	firstWal, err := getWALStat(helper.GetCluster().Name, walDirEntries, walStatModeFirst)
 	if err != nil {
-		logging.Error(err, "Error while reading WALs directory (getting first WAL)")
+		contextLogger.Error(err, "Error while reading WALs directory (getting first WAL)")
 		return nil, err
 	}
 
 	lastWal, err := getWALStat(helper.GetCluster().Name, walDirEntries, walStatModeLast)
 	if err != nil {
-		logging.Error(err, "Error while reading WALs directory (getting first WAL)")
+		contextLogger.Error(err, "Error while reading WALs directory (getting first WAL)")
 		return nil, err
 	}
 

@@ -34,27 +34,27 @@ func (Implementation) Archive(
 	ctx context.Context,
 	request *wal.WALArchiveRequest,
 ) (*wal.WALArchiveResult, error) {
-	logging := logging.FromContext(ctx)
+	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.ClusterDefinition)
 	if err != nil {
-		logging.Error(err, "Error while decoding cluster definition from CNPG")
+		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err
 	}
 
 	walName := path.Base(request.SourceFileName)
 	destinationPath := storage.GetWALFilePath(helper.GetCluster().Name, walName)
 
-	logging = logging.WithValues(
+	contextLogger = contextLogger.WithValues(
 		"sourceFileName", request.SourceFileName,
 		"destinationPath", destinationPath,
 		"clusterName", helper.GetCluster().Name,
 	)
 
-	logging.Info("Archiving WAL File")
+	contextLogger.Info("Archiving WAL File")
 	err = fileutils.CopyFile(request.SourceFileName, destinationPath)
 	if err != nil {
-		logging.Error(err, "Error archiving WAL file")
+		contextLogger.Error(err, "Error archiving WAL file")
 	}
 
 	return &wal.WALArchiveResult{}, err
@@ -65,26 +65,26 @@ func (Implementation) Restore(
 	ctx context.Context,
 	request *wal.WALRestoreRequest,
 ) (*wal.WALRestoreResult, error) {
-	logging := logging.FromContext(ctx)
+	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.ClusterDefinition)
 	if err != nil {
-		logging.Error(err, "Error while decoding cluster definition from CNPG")
+		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err
 	}
 
 	walFilePath := storage.GetWALFilePath(helper.GetCluster().Name, request.SourceWalName)
-	logging = logging.WithValues(
+	contextLogger = contextLogger.WithValues(
 		"clusterName", helper.GetCluster().Name,
 		"walName", request.SourceWalName,
 		"walFilePath", walFilePath,
 		"destinationPath", request.DestinationFileName,
 	)
 
-	logging.Info("Restoring WAL File")
+	contextLogger.Info("Restoring WAL File")
 	err = fileutils.CopyFile(walFilePath, request.DestinationFileName)
 	if err != nil {
-		logging.Info("Restored WAL File", "err", err)
+		contextLogger.Info("Restored WAL File", "err", err)
 	}
 
 	return &wal.WALRestoreResult{}, err

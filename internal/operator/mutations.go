@@ -32,7 +32,7 @@ func (Implementation) MutateCluster(
 	_ context.Context,
 	request *operator.OperatorMutateClusterRequest,
 ) (*operator.OperatorMutateClusterResult, error) {
-	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.Definition)
+	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.Definition)
 	if err != nil {
 		return nil, err
 	}
