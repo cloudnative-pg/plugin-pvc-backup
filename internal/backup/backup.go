@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudnative-pg/cnpg-i/pkg/backup"
 
+	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/executor"
 	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/storage"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
@@ -55,7 +56,7 @@ func (Implementation) Backup(
 	}
 
 	cluster := helper.GetCluster()
-	rep, err := newRepository(
+	rep, err := executor.NewRepository(
 		ctx,
 		storage.GetBasePath(cluster.Name),
 		storage.GetKopiaConfigFilePath(cluster.Name),
@@ -65,26 +66,14 @@ func (Implementation) Backup(
 		return nil, err
 	}
 
-	exec := newExecutor(
+	exec := executor.NewLocalExecutor(
 		cluster,
 		backupObject,
 		rep,
-		podIP,
 	)
 
 	startedAt := time.Now()
-	contextLogger.Info("Preparing physical backup")
-	if err := exec.setBackupMode(ctx); err != nil {
-		return nil, err
-	}
-
-	contextLogger.Info("Copying files")
-	if err := exec.execBackup(ctx); err != nil {
-		return nil, err
-	}
-
-	contextLogger.Info("Finishing backup")
-	backupInfo, err := exec.unsetBackupMode(ctx)
+	backupInfo, err := exec.TakeBackup(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +83,8 @@ func (Implementation) Backup(
 		BackupName:        backupInfo.BackupName,
 		StartedAt:         startedAt.Unix(),
 		StoppedAt:         time.Now().Unix(),
-		BeginWal:          exec.beginWal,
-		EndWal:            exec.endWal,
+		BeginWal:          exec.BeginWal,
+		EndWal:            exec.EndWal,
 		BeginLsn:          string(backupInfo.BeginLSN),
 		EndLsn:            string(backupInfo.EndLSN),
 		BackupLabelFile:   backupInfo.LabelFile,

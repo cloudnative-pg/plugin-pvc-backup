@@ -1,4 +1,4 @@
-package backup
+package executor
 
 import (
 	"context"
@@ -28,16 +28,16 @@ var backupModeBackoff = wait.Backoff{
 	Jitter:   0.1,
 }
 
-// executor manages the execution of a backup
-type executor struct {
+// Executor manages the execution of a backup
+type Executor struct {
 	backupClient webserver.BackupClient
 
-	beginWal string
-	endWal   string
+	BeginWal string
+	EndWal   string
 
 	cluster              *apiv1.Cluster
 	backup               *apiv1.Backup
-	repository           *repository
+	repository           *Repository
 	backupClientEndpoint string
 }
 
@@ -50,9 +50,9 @@ type tablespace struct {
 	oid string
 }
 
-// newExecutor creates a new backup executor
-func newExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *repository, endpoint string) *executor {
-	return &executor{
+// newExecutor creates a new backup Executor
+func newExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *Repository, endpoint string) *Executor {
+	return &Executor{
 		backupClient:         webserver.NewBackupClient(),
 		cluster:              cluster,
 		backup:               backup,
@@ -61,12 +61,34 @@ func newExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *repository,
 	}
 }
 
+// NewLocalExecutor creates a new backup Executor
+func NewLocalExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *Repository) *Executor {
+	return newExecutor(cluster, backup, repo, podIP)
+}
+
+// TakeBackup executes a backup. Returns the result and any error encountered
+func (executor *Executor) TakeBackup(ctx context.Context) (*webserver.BackupResultData, error) {
+	contextLogger := logging.FromContext(ctx)
+	contextLogger.Info("Preparing physical backup")
+	if err := executor.setBackupMode(ctx); err != nil {
+		return nil, err
+	}
+
+	contextLogger.Info("Copying files")
+	if err := executor.execSnapshot(ctx); err != nil {
+		return nil, err
+	}
+
+	contextLogger.Info("Finishing backup")
+	return executor.unsetBackupMode(ctx)
+}
+
 // setBackupMode starts a backup by setting PostgreSQL in backup mode
-func (executor *executor) setBackupMode(ctx context.Context) error {
+func (executor *Executor) setBackupMode(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
 	var currentWALErr error
-	executor.beginWal, currentWALErr = executor.getCurrentWALFile(ctx)
+	executor.BeginWal, currentWALErr = executor.getCurrentWALFile(ctx)
 	if currentWALErr != nil {
 		return currentWALErr
 	}
@@ -102,8 +124,8 @@ func (executor *executor) setBackupMode(ctx context.Context) error {
 	return nil
 }
 
-// execBackup takes the snapshot of the data directory and the tablespace folder
-func (executor *executor) execBackup(ctx context.Context) error {
+// execSnapshot takes the snapshot of the data directory and the tablespace folder
+func (executor *Executor) execSnapshot(ctx context.Context) error {
 	const snapshotTablespaceOidName = "oid"
 
 	const (
@@ -142,7 +164,7 @@ func (executor *executor) execBackup(ctx context.Context) error {
 }
 
 // GetTablespaces read the list of tablespaces
-func (*executor) getTablespaces(ctx context.Context) ([]tablespace, error) {
+func (*Executor) getTablespaces(ctx context.Context) ([]tablespace, error) {
 	logger := logging.FromContext(ctx)
 
 	tblFolder := path.Join(pgDataLocation, tablespacesFolder)
@@ -171,7 +193,7 @@ func (*executor) getTablespaces(ctx context.Context) ([]tablespace, error) {
 }
 
 // unsetBackupMode stops a backup and resume PostgreSQL normal operation
-func (executor *executor) unsetBackupMode(ctx context.Context) (*webserver.BackupResultData, error) {
+func (executor *Executor) unsetBackupMode(ctx context.Context) (*webserver.BackupResultData, error) {
 	logger := logging.FromContext(ctx)
 
 	if err := executor.backupClient.Stop(ctx, executor.backupClientEndpoint, webserver.StopBackupRequest{
@@ -203,7 +225,7 @@ func (executor *executor) unsetBackupMode(ctx context.Context) (*webserver.Backu
 	logger.Info("PostgreSQL Backup mode stopped")
 
 	var err error
-	executor.endWal, err = executor.getCurrentWALFile(ctx)
+	executor.EndWal, err = executor.getCurrentWALFile(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +241,7 @@ func retryOnBackupNotStopped(e error) bool {
 	return e == errBackupNotStopped
 }
 
-func (executor *executor) getCurrentWALFile(ctx context.Context) (string, error) {
+func (executor *Executor) getCurrentWALFile(ctx context.Context) (string, error) {
 	const currentWALFileControlFile = "Latest checkpoint's REDO WAL file"
 
 	controlDataOutput, err := getPgControlData(ctx)

@@ -1,4 +1,4 @@
-package backup
+package executor
 
 import (
 	"context"
@@ -16,19 +16,19 @@ const (
 	walFolder         = "pg_wal"
 )
 
-// repository represents a backup repository where
+// Repository represents a backup repository where
 // base directories are stored
-type repository struct {
+type Repository struct {
 	path           string
 	cacheDirectory string
 	configFile     string
 }
 
-// newRepository creates a new repository in a certain
+// NewRepository creates a new repository in a certain
 // path, ensuring that the repository is initialized and
 // ready to accept backups
-func newRepository(ctx context.Context, path string, configFile string, cacheDirectory string) (*repository, error) {
-	result := &repository{
+func NewRepository(ctx context.Context, path string, configFile string, cacheDirectory string) (*Repository, error) {
+	result := &Repository{
 		path:           path,
 		configFile:     configFile,
 		cacheDirectory: cacheDirectory,
@@ -50,12 +50,12 @@ func newRepository(ctx context.Context, path string, configFile string, cacheDir
 	return result, nil
 }
 
-func (repo *repository) initializeRepository(ctx context.Context) error {
+func (repo *Repository) initializeRepository(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
 	args := []string{
 		"kopia",
-		"repository",
+		"Repository",
 		"create",
 		"filesystem",
 		fmt.Sprintf("--path=%s", repo.path),
@@ -78,7 +78,7 @@ func (repo *repository) initializeRepository(ctx context.Context) error {
 	return repo.configureIgnoreFolders(ctx)
 }
 
-func (repo *repository) configureIgnoreFolders(ctx context.Context) error {
+func (repo *Repository) configureIgnoreFolders(ctx context.Context) error {
 	if err := repo.addIgnoreFolder(ctx, path.Join(pgDataLocation, walFolder)); err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (repo *repository) configureIgnoreFolders(ctx context.Context) error {
 	return nil
 }
 
-func (repo *repository) addIgnoreFolder(ctx context.Context, folder string) error {
+func (repo *Repository) addIgnoreFolder(ctx context.Context, folder string) error {
 	logger := logging.FromContext(ctx)
 
 	args := []string{
@@ -118,7 +118,7 @@ func (repo *repository) addIgnoreFolder(ctx context.Context, folder string) erro
 }
 
 // takeSnapshot takes a Kopia snapshot of a certain path, adding a set of tags
-func (repo *repository) takeSnapshot(ctx context.Context, path string, tags map[string]string) error {
+func (repo *Repository) takeSnapshot(ctx context.Context, path string, tags map[string]string) error {
 	logger := logging.FromContext(ctx)
 
 	args := []string{
