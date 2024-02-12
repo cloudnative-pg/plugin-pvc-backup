@@ -19,11 +19,11 @@ package operator
 import (
 	"context"
 
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/pluginhelper"
 	"github.com/cloudnative-pg/cnpg-i/pkg/operator"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
 )
 
 // MutateCluster is called to mutate a cluster with the defaulting webhook.

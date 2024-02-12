@@ -58,6 +58,8 @@ github.com/cloudnative-pg/cloudnative-pg v1.22.1-0.20240123130737-a22a155b9eb8 h
 github.com/cloudnative-pg/cloudnative-pg v1.22.1-0.20240123130737-a22a155b9eb8/go.mod h1:r6blheO2ihiuqKbk6rqPN5//PPJnYtKCGT2OxpXtk2o=
 github.com/cloudnative-pg/cnpg-i v0.0.0-20240202130713-14050b29b7a2 h1:7Cow1BF5rM3k7q+QYjJsPiYGZTK8w+uTGa4VZ3IbBpk=
 github.com/cloudnative-pg/cnpg-i v0.0.0-20240202130713-14050b29b7a2/go.mod h1:0G5GXQVj09KvONIcYURyroL74zOFGjv4eI5OXz7/G/0=
+github.com/cloudnative-pg/cnpg-i-machinery v0.0.0-20240215100236-082604edc33a h1:ccAuhOYdWRuPXNDOq4OuLOInfJAKPTvxmVd/FINiET4=
+github.com/cloudnative-pg/cnpg-i-machinery v0.0.0-20240215100236-082604edc33a/go.mod h1:A2Zx68zGuz6N/mv/1Jxgn9D6fV9Uc+wA58knRrEHwfo=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=

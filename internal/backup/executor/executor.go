@@ -10,10 +10,9 @@ import (
 
 	apiv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
 	"github.com/cloudnative-pg/cloudnative-pg/pkg/management/postgres/webserver"
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/logging"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
-
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 )
 
 var (
