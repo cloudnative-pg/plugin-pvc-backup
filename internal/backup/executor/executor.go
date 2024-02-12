@@ -32,6 +32,7 @@ var backupModeBackoff = wait.Backoff{
 type Executor struct {
 	backupClient webserver.BackupClient
 
+	// TODO: these should be a getter that return an error if empty
 	BeginWal string
 	EndWal   string
 
