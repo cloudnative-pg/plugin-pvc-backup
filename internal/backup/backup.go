@@ -54,48 +54,48 @@ func (Implementation) Backup(
 		return nil, err
 	}
 
-	repository, err := NewRepository(
+	cluster := helper.GetCluster()
+	rep, err := newRepository(
 		ctx,
-		storage.GetBasePath(helper.GetCluster().Name),
-		storage.GetKopiaConfigFilePath(helper.GetCluster().Name),
-		storage.GetKopiaCacheDirectory(helper.GetCluster().Name),
+		storage.GetBasePath(cluster.Name),
+		storage.GetKopiaConfigFilePath(cluster.Name),
+		storage.GetKopiaCacheDirectory(cluster.Name),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	executor := NewExecutor(
-		helper.GetCluster(),
+	exec := newExecutor(
+		cluster,
 		backupObject,
-		repository,
+		rep,
 		podIP,
 	)
 
 	startedAt := time.Now()
 	contextLogger.Info("Preparing physical backup")
-	if err := executor.Start(ctx); err != nil {
+	if err := exec.setBackupMode(ctx); err != nil {
 		return nil, err
 	}
 
 	contextLogger.Info("Copying files")
-	if err := executor.Backup(ctx); err != nil {
+	if err := exec.execBackup(ctx); err != nil {
 		return nil, err
 	}
 
 	contextLogger.Info("Finishing backup")
-	backupInfo, err := executor.Stop(ctx)
+	backupInfo, err := exec.unsetBackupMode(ctx)
 	if err != nil {
 		return nil, err
 	}
-	stoppedAt := time.Now()
 
 	return &backup.BackupResult{
 		BackupId:          backupInfo.BackupName,
 		BackupName:        backupInfo.BackupName,
 		StartedAt:         startedAt.Unix(),
-		StoppedAt:         stoppedAt.Unix(),
-		BeginWal:          executor.beginWal,
-		EndWal:            executor.endWal,
+		StoppedAt:         time.Now().Unix(),
+		BeginWal:          exec.beginWal,
+		EndWal:            exec.endWal,
 		BeginLsn:          string(backupInfo.BeginLSN),
 		EndLsn:            string(backupInfo.EndLSN),
 		BackupLabelFile:   backupInfo.LabelFile,
