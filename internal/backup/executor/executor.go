@@ -32,14 +32,31 @@ var backupModeBackoff = wait.Backoff{
 type Executor struct {
 	backupClient webserver.BackupClient
 
-	// TODO: these should be a getter that return an error if empty
-	BeginWal string
-	EndWal   string
+	beginWal string
+	endWal   string
 
 	cluster              *apiv1.Cluster
 	backup               *apiv1.Backup
 	repository           *Repository
 	backupClientEndpoint string
+
+	executed bool
+}
+
+// GetBeginWal returns the beginWal value, panics if the executor was not executed
+func (executor *Executor) GetBeginWal() string {
+	if !executor.executed {
+		panic("beginWal: please run take backup before trying to access this value")
+	}
+	return executor.beginWal
+}
+
+// GetEndWal returns the endWal value, panics if the executor was not executed
+func (executor *Executor) GetEndWal() string {
+	if !executor.executed {
+		panic("endWal: please run take backup before trying to access this value")
+	}
+	return executor.endWal
 }
 
 // tablespace represent a tablespace location
@@ -69,6 +86,10 @@ func NewLocalExecutor(cluster *apiv1.Cluster, backup *apiv1.Backup, repo *Reposi
 
 // TakeBackup executes a backup. Returns the result and any error encountered
 func (executor *Executor) TakeBackup(ctx context.Context) (*webserver.BackupResultData, error) {
+	defer func() {
+		executor.executed = true
+	}()
+
 	contextLogger := logging.FromContext(ctx)
 	contextLogger.Info("Preparing physical backup")
 	if err := executor.setBackupMode(ctx); err != nil {
@@ -89,7 +110,7 @@ func (executor *Executor) setBackupMode(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
 	var currentWALErr error
-	executor.BeginWal, currentWALErr = executor.getCurrentWALFile(ctx)
+	executor.beginWal, currentWALErr = executor.getCurrentWALFile(ctx)
 	if currentWALErr != nil {
 		return currentWALErr
 	}
@@ -226,7 +247,7 @@ func (executor *Executor) unsetBackupMode(ctx context.Context) (*webserver.Backu
 	logger.Info("PostgreSQL Backup mode stopped")
 
 	var err error
-	executor.EndWal, err = executor.getCurrentWALFile(ctx)
+	executor.endWal, err = executor.getCurrentWALFile(ctx)
 	if err != nil {
 		return nil, err
 	}
