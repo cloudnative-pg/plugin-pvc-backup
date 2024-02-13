@@ -36,7 +36,7 @@ func (Implementation) Archive(
 ) (*wal.WALArchiveResult, error) {
 	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.ClusterDefinition).Build()
 	if err != nil {
 		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err
@@ -67,7 +67,7 @@ func (Implementation) Restore(
 ) (*wal.WALRestoreResult, error) {
 	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.ClusterDefinition).Build()
 	if err != nil {
 		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err

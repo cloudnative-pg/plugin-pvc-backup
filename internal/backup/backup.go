@@ -43,7 +43,7 @@ func (Implementation) Backup(
 ) (*backup.BackupResult, error) {
 	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.ClusterDefinition).Build()
 	if err != nil {
 		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err

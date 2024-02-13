@@ -32,7 +32,7 @@ func (Implementation) MutateCluster(
 	_ context.Context,
 	request *operator.OperatorMutateClusterRequest,
 ) (*operator.OperatorMutateClusterResult, error) {
-	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.Definition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.Definition).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,8 @@ func (Implementation) MutatePod(
 	_ context.Context,
 	request *operator.OperatorMutatePodRequest,
 ) (*operator.OperatorMutatePodResult, error) {
-	helper, err := pluginhelper.NewFromClusterAndPod(metadata.Data.Name, request.ClusterDefinition, request.PodDefinition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.ClusterDefinition).
+		WithPod(request.PodDefinition).Build()
 	if err != nil {
 		return nil, err
 	}

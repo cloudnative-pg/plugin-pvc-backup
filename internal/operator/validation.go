@@ -41,7 +41,7 @@ func (Implementation) ValidateClusterCreate(
 ) (*operator.OperatorValidateClusterCreateResult, error) {
 	result := &operator.OperatorValidateClusterCreateResult{}
 
-	helper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.Definition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.Definition).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +58,12 @@ func (Implementation) ValidateClusterChange(
 ) (*operator.OperatorValidateClusterChangeResult, error) {
 	result := &operator.OperatorValidateClusterChangeResult{}
 
-	oldClusterHelper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.OldCluster)
+	oldClusterHelper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.OldCluster).Build()
 	if err != nil {
 		return nil, fmt.Errorf("while parsing old cluster: %w", err)
 	}
 
-	newClusterHelper, err := pluginhelper.NewFromJSONCluster(metadata.Data.Name, request.NewCluster)
+	newClusterHelper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.NewCluster).Build()
 	if err != nil {
 		return nil, fmt.Errorf("while parsing new cluster: %w", err)
 	}
