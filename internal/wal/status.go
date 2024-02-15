@@ -25,6 +25,7 @@ import (
 
 	"github.com/cloudnative-pg/cnpg-i/pkg/wal"
 
+	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/storage"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
@@ -42,35 +43,35 @@ func (Implementation) Status(
 	ctx context.Context,
 	request *wal.WALStatusRequest,
 ) (*wal.WALStatusResult, error) {
-	logging := logging.FromContext(ctx)
+	contextLogger := logging.FromContext(ctx)
 
-	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.ClusterDefinition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.ClusterDefinition).Build()
 	if err != nil {
-		logging.Error(err, "Error while decoding cluster definition from CNPG")
+		contextLogger.Error(err, "Error while decoding cluster definition from CNPG")
 		return nil, err
 	}
 
-	walPath := getWALPath(helper.GetCluster().Name)
-	logging = logging.WithValues(
+	walPath := storage.GetWALPath(helper.GetCluster().Name)
+	contextLogger = contextLogger.WithValues(
 		"walPath", walPath,
 		"clusterName", helper.GetCluster().Name,
 	)
 
 	walDirEntries, err := os.ReadDir(walPath)
 	if err != nil {
-		logging.Error(err, "Error while reading WALs directory")
+		contextLogger.Error(err, "Error while reading WALs directory")
 		return nil, err
 	}
 
 	firstWal, err := getWALStat(helper.GetCluster().Name, walDirEntries, walStatModeFirst)
 	if err != nil {
-		logging.Error(err, "Error while reading WALs directory (getting first WAL)")
+		contextLogger.Error(err, "Error while reading WALs directory (getting first WAL)")
 		return nil, err
 	}
 
 	lastWal, err := getWALStat(helper.GetCluster().Name, walDirEntries, walStatModeLast)
 	if err != nil {
-		logging.Error(err, "Error while reading WALs directory (getting first WAL)")
+		contextLogger.Error(err, "Error while reading WALs directory (getting first WAL)")
 		return nil, err
 	}
 
@@ -90,7 +91,7 @@ func getWALStat(clusterName string, entries []fs.DirEntry, mode walStatMode) (st
 		return "", fmt.Errorf("%s is not a directory", entry)
 	}
 
-	entryAbsolutePath := path.Join(getWALPath(clusterName), entry.Name())
+	entryAbsolutePath := path.Join(storage.GetWALPath(clusterName), entry.Name())
 	subFolderEntries, err := os.ReadDir(entryAbsolutePath)
 	if err != nil {
 		return "", fmt.Errorf("while reading %s entries: %w", entry, err)

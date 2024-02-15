@@ -30,6 +30,8 @@ const (
 	imagePullPolicyParameter = "imagePullPolicy"
 	imageNameParameter       = "image"
 	pvcNameParameter         = "pvc"
+	secretNameParameter      = "secretName"
+	secretKeyParameter       = "secretKey"
 )
 
 // ValidateClusterCreate validates a cluster that is being created
@@ -39,7 +41,7 @@ func (Implementation) ValidateClusterCreate(
 ) (*operator.OperatorValidateClusterCreateResult, error) {
 	result := &operator.OperatorValidateClusterCreateResult{}
 
-	helper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.Definition)
+	helper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.Definition).Build()
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +58,12 @@ func (Implementation) ValidateClusterChange(
 ) (*operator.OperatorValidateClusterChangeResult, error) {
 	result := &operator.OperatorValidateClusterChangeResult{}
 
-	oldClusterHelper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.OldCluster)
+	oldClusterHelper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.OldCluster).Build()
 	if err != nil {
 		return nil, fmt.Errorf("while parsing old cluster: %w", err)
 	}
 
-	newClusterHelper, err := pluginhelper.NewFromCluster(metadata.Data.Name, request.NewCluster)
+	newClusterHelper, err := pluginhelper.NewDataBuilder(metadata.Data.Name, request.NewCluster).Build()
 	if err != nil {
 		return nil, fmt.Errorf("while parsing new cluster: %w", err)
 	}
@@ -90,6 +92,18 @@ func validateParameters(helper *pluginhelper.Data) []*operator.ValidationError {
 		result = append(
 			result,
 			helper.ValidationErrorForParameter(imageNameParameter, "cannot be empty"))
+	}
+
+	if len(helper.Parameters[secretNameParameter]) == 0 {
+		result = append(
+			result,
+			helper.ValidationErrorForParameter(secretNameParameter, "cannot be empty"))
+	}
+
+	if len(helper.Parameters[secretKeyParameter]) == 0 {
+		result = append(
+			result,
+			helper.ValidationErrorForParameter(secretKeyParameter, "cannot be empty"))
 	}
 
 	return result

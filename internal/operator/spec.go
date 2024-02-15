@@ -16,10 +16,16 @@ limitations under the License.
 
 package operator
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	"strings"
 
-func getSidecarContainer(parameters map[string]string) corev1.Container {
-	return corev1.Container{
+	corev1 "k8s.io/api/core/v1"
+)
+
+const pgPath = "/var/lib/postgresql"
+
+func getSidecarContainer(pgPod *corev1.Pod, parameters map[string]string) corev1.Container {
+	result := corev1.Container{
 		Name: "plugin-pvc-backup",
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -34,14 +40,32 @@ func getSidecarContainer(parameters map[string]string) corev1.Container {
 				Name:      "backups",
 				MountPath: "/backup",
 			},
-			{
-				Name:      "pgdata",
-				MountPath: "/var/lib/postgresql/data",
-			},
 		},
 		Image:           parameters["image"],
 		ImagePullPolicy: corev1.PullPolicy(parameters[imagePullPolicyParameter]),
+		Env: []corev1.EnvVar{
+			{
+				Name: "KOPIA_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: parameters["secretName"],
+						},
+						Key: parameters["secretKey"],
+					},
+				},
+			},
+		},
 	}
+
+	volumeMounts := pgPod.Spec.Containers[0].VolumeMounts
+	for i := range volumeMounts {
+		if strings.HasPrefix(volumeMounts[i].MountPath, pgPath) {
+			result.VolumeMounts = append(result.VolumeMounts, volumeMounts[i])
+		}
+	}
+
+	return result
 }
 
 func getBackupVolume(parameters map[string]string) corev1.Volume {
