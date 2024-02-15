@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/logging"
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/pluginhelper"
 	"github.com/cloudnative-pg/cnpg-i/pkg/backup"
 
 	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/executor"
 	"github.com/cloudnative-pg/plugin-pvc-backup/internal/backup/storage"
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
 )
 
 // Implementation is the implementation of the identity service

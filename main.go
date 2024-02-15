@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/pluginhelper"
 	"github.com/cloudnative-pg/cnpg-i/pkg/backup"
 	"github.com/cloudnative-pg/cnpg-i/pkg/operator"
 	"github.com/cloudnative-pg/cnpg-i/pkg/wal"
@@ -30,7 +31,6 @@ import (
 	"github.com/cloudnative-pg/plugin-pvc-backup/internal/identity"
 	operatorImpl "github.com/cloudnative-pg/plugin-pvc-backup/internal/operator"
 	walImpl "github.com/cloudnative-pg/plugin-pvc-backup/internal/wal"
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
 )
 
 func main() {

@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/logging"
+
 	"github.com/cloudnative-pg/plugin-pvc-backup/internal/fileutils"
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/logging"
 )
 
 const (

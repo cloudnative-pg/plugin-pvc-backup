@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cloudnative-pg/cnpg-i-machinery/pkg/pluginhelper"
 	"github.com/cloudnative-pg/cnpg-i/pkg/operator"
 
 	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/metadata"
-	"github.com/cloudnative-pg/plugin-pvc-backup/pkg/pluginhelper"
 )
 
 const (
